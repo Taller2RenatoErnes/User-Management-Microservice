@@ -57,12 +57,10 @@ const User = sequelize.define('User', {
             notEmpty: true,
         },
     },
-
-    //TODO Agregar el campo de idCareer
-    // idCareer: {
-    //     type: DataTypes.BOOLEAN,
-    //     defaultValue: false,
-    // },
+    idCareer: {
+        type: DataTypes.UUID,
+        allowNull: false
+    },
 }, {
     timestamps: true,
     paranoid: true,
