@@ -1,5 +1,5 @@
 services:
-  db:
+  usersManagement:
     image: postgres
     restart: always
     environment:

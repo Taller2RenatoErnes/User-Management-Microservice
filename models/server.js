@@ -1,8 +1,7 @@
 express = require('express');
 const logger = require('morgan');
-const sequelize = require('./database/database.js');
 const cors = require('cors');
-// const User = require("../models/database/Users");
+const {sequelize, User, Progress} = require('./database/indexDB.js');
 // const {generateToken, validateJWT} = require('../middleware/jwt.js');
 
 class Server{
@@ -14,7 +13,7 @@ class Server{
             users: '/api/users'
         };
         this.middlewares();
-        // this.dBConnection();
+        this.dBConnection();
         this.routes();
         // this.createToken();
     }
@@ -27,14 +26,20 @@ class Server{
 
     async dBConnection(){
         try {
-            await sequelize.authenticate();
-            console.log('Database online');
+            console.log('Conectando a la base de datos');
+            await sequelize.authenticate().then(() => {
+                console.log('Conexión establecida con la BDD');
+            }).catch((error) => {
+                console.log('Error de autenticación en BDD: ', error);
+                throw new Error(error);
+            });
 
-            const models = [User];
+            console.log('Database online');
+            const models = [User, Progress];
 
             for (const model of models) {
                 await model.sync({ force: false });
-                console.log(model.name, 'table created');
+                console.log(model.name, ': Tabla sincronizada');
             }
             
             console.log('Database sync');

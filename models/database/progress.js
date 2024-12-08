@@ -1,5 +1,4 @@
 const { DataTypes } = require('sequelize');
-const bcrypt = require('bcrypt');
 const sequelize = require('./database.js');
 const { v4: uuidv4 } = require('uuid');
 
@@ -31,4 +30,4 @@ const Progress = sequelize.define('Progress', {
     paranoid: true,
 });
 
-module.exports = User;
+module.exports = Progress;
