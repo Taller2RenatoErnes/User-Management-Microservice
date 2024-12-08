@@ -39,7 +39,7 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING(255),
         allowNull: false,
         validate: {
-            notEmpty: true, // Se asegura que no esté vacío
+            notEmpty: true,
         },
     },
     email: {
