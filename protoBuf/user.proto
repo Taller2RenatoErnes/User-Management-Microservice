@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package usermanagement;
+
+service UserService {
+    rpc getUser (UserRequest) returns (getUserResponse);
+    
+}
+
+message UserRequest {
+    string token = 1;
+}
+
+message getUserResponse {
+    string token = 1;
+    string userName = 2;
+    string email = 3;
+    string password = 4;
+}
+
+
+
