@@ -3,20 +3,81 @@ syntax = "proto3";
 package usermanagement;
 
 service UserService {
-    rpc getUser (UserRequest) returns (getUserResponse);
-    
+    rpc Login (LoginRequest) returns (LoginResponse);
+    rpc GetProfile (ProfileRequest) returns (ProfileResponse);
+    rpc UpdateProfile (UpdateProfileRequest) returns (UpdateProfileResponse);
+    rpc GetProgress (ProgressRequest) returns (ProgressResponse);
+    rpc UpdateProgress (UpdateProgressRequest) returns (UpdateProgressResponse);
+    rpc CreateUser (CreateUserRequest) returns (CreateUserResponse);
 }
 
-message UserRequest {
+message LoginRequest {
+    string email = 1;
+    string password = 2;
+}
+
+message LoginResponse {
     string token = 1;
 }
 
-message getUserResponse {
+message ProfileRequest {
     string token = 1;
-    string userName = 2;
-    string email = 3;
-    string password = 4;
 }
 
+message ProfileResponse {
+    string id = 1;
+    string name = 2;
+    string firstLastname = 3;
+    string secondLastname = 4;
+    string rut = 5;
+    string email = 6;
+    string idCareer = 7;
+}
 
+message UpdateProfileRequest {
+    string token = 1;
+    string name = 2;
+    string firstLastname = 3;
+    string secondLastname = 4;
+}
 
+message UpdateProfileResponse {
+    string message = 1;
+}
+
+message ProgressRequest {
+    string token = 1;
+}
+
+message ProgressResponse {
+    repeated CourseProgress progress = 1;
+}
+
+message CourseProgress {
+    string courseCode = 1;
+    string status = 2;
+}
+
+message UpdateProgressRequest {
+    string token = 1;
+    repeated string approvedCourses = 2;
+    repeated string removedCourses = 3;
+}
+
+message UpdateProgressResponse {
+    string message = 1;
+}
+
+message CreateUserRequest {
+    string name = 1;
+    string firstLastname = 2;
+    string secondLastname = 3;
+    string rut = 4;
+    string email = 5;
+    string password = 6;
+    string idCareer = 7;
+}
+
+message CreateUserResponse {
+    string id = 1;
+}

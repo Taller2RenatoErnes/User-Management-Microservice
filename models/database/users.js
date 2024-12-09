@@ -1,12 +1,11 @@
 const { DataTypes } = require('sequelize');
 const bcrypt = require('bcrypt');
 const sequelize = require('./database.js');
-const { v4: uuidv4 } = require('uuid');
 
 const User = sequelize.define('User', {
     id: {
-        type: DataTypes.UUID,
-        defaultValue: () => uuidv4(),
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
         primaryKey: true,
         allowNull: false,
     },
@@ -58,7 +57,7 @@ const User = sequelize.define('User', {
         },
     },
     idCareer: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false
     },
 }, {

@@ -4,17 +4,17 @@ const { v4: uuidv4 } = require('uuid');
 
 const Progress = sequelize.define('Progress', {
     id: {
-        type: DataTypes.UUID,
-        defaultValue: () => uuidv4(),
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
         primaryKey: true,
         allowNull: false,
     },
     idUser: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false,
     },
     asignatureCode: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false
     },
     state:{

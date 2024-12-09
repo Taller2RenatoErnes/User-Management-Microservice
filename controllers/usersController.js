@@ -1,15 +1,17 @@
 
 const express = require('express');
-const app = express();
-const {User, Progress} = require('../models/database/indexDB.js');
+const { User, Progress } = require('../models/database/indexDB.js');
 
-const login = async (req, res)=> {
+const login = async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ where: { email, password } });
 
         if (!user) {
-            return res.status(401).json({ message: 'Credenciales inválidas.' });
+            return res.status(401).json({
+                error: true,
+                message: 'Credenciales inválidas.'
+            });
         }
 
         return res.status(200).json({ token: user.id });
@@ -19,7 +21,7 @@ const login = async (req, res)=> {
     }
 }
 
-const getUsers = async (req, res)=>{
+const getUsers = async (req, res) => {
     try {
         const user = req.user;
         return res.status(200).json({
@@ -37,10 +39,10 @@ const getUsers = async (req, res)=>{
     }
 }
 
-const updateProfile = async (req, res)=>{
+const updateProfile = async (req, res) => {
     try {
         const { name, firstLastname, secondLastname } = req.body;
-        
+
         if (name) req.user.name = name;
         if (firstLastname) req.user.firstLastname = firstLastname;
         if (secondLastname) req.user.secondLastname = secondLastname;
@@ -53,7 +55,7 @@ const updateProfile = async (req, res)=>{
     }
 }
 
-const getProgress = async (req, res)=>{
+const getProgress = async (req, res) => {
     try {
         const progress = await Progress.findAll({
             where: { userId: req.user.id },  // Relacionamos el progreso con el usuario
@@ -66,7 +68,7 @@ const getProgress = async (req, res)=>{
     }
 }
 
-const updateProgress = async (req, res)=> {
+const updateProgress = async (req, res) => {
     try {
         const { approvedCourses, removedCourses } = req.body;  // Se espera un objeto con los cursos aprobados y eliminados
 
@@ -81,7 +83,6 @@ const updateProgress = async (req, res)=> {
             }
         }
 
-        // Eliminar cursos aprobados
         if (removedCourses && Array.isArray(removedCourses)) {
             for (let courseCode of removedCourses) {
                 await Progress.destroy({
@@ -98,13 +99,28 @@ const updateProgress = async (req, res)=> {
         console.log('Error en /my-progress (PATCH):', error);
         return res.status(500).json({ message: 'Error al actualizar el progreso.' });
     }
+
+}
+
+const createUser = async (req, res) => {
+    try {
+        const { name, firstLastname, secondLastname, rut, email, password, idCareer } = req.body;
+        const newUser = await User.create({ name, firstLastname, secondLastname, rut, email, password, idCareer });
+
+        return res.status(201).json(newUser);
+    } catch (error) {
+        console.log('Error en /users:', error);
+        return res.status(500).json({ message: 'Error al crear el usuario.' });
+    }
 }
 
 module.exports = {
     getUsers,
     getProgress,
     updateProfile,
-    updateProgress 
+    updateProgress,
+    login,
+    createUser
 };
 
 
