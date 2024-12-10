@@ -1,25 +1,40 @@
-
-const express = require('express');
 const { User, Progress } = require('../models/database/indexDB.js');
+const bcrypt = require('bcrypt');
 
-const login = async (req, res) => {
+const login = async (call, callback) => {
+    console.log('Inicio de sesión',  call.request);
+
+    if (!call.request || !call.request.email || !call.request.password) {
+        return callback(null, {
+            token: "",
+            error: true,
+            message: "Campos faltantes: email y/o password.",
+        });
+    }
+
     try {
-        const { email, password } = req.body;
-        const user = await User.findOne({ where: { email, password } });
+        const { email, password } = call.request;
+        const user = await User.findOne({ where: { email } });
 
         if (!user) {
-            return res.status(401).json({
-                error: true,
-                message: 'Credenciales inválidas.'
-            });
+            return callback(null, { token: "", error: true, message: 'Credenciales inválidas' });
         }
 
-        return res.status(200).json({ token: user.id });
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+
+        if (!isPasswordValid) {
+            return callback(null, { token: "", error: true, message: 'Credenciales inválidas' });
+        }
+
+        return callback(null, { token: user.id, error: false, message: 'Inicio de sesión exitoso' });
+
     } catch (error) {
-        console.log('Error en /login:', error);
-        return res.status(500).json({ message: 'Error al iniciar sesión.' });
+        console.error('Error en gRPC Login:', error);
+        return callback({ code: grpc.status.INTERNAL, message: 'Error al iniciar sesión.' });
     }
-}
+};
+
+
 
 const getUsers = async (req, res) => {
     try {

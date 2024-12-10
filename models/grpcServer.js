@@ -13,16 +13,24 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 const userProto = grpc.loadPackageDefinition(packageDefinition).usermanagement;
 
 function login(call, callback) {
-    const { email, password } = call.request;
+    if ( !call.request.email || !call.request.password) {
+        return callback(null, {
+            token: "",
+            error: true,
+            message: "Campos requeridos faltantes: email y/o password.",
+        });
+    }
 
-    userController.login({ body: { email, password } }, {
+    userController.login(call , {
         status: (code) => ({
             json: (response) => callback(null, response),
         }),
     }).catch((err) => {
-        callback({ code: grpc.status.INTERNAL, message: err.message });
+        console.error("Error en login:", err);
+        callback({ code: grpc.status.INTERNAL, message: "Error interno del servidor." });
     });
 }
+
 
 function getProfile(call, callback) {
     const { token } = call.request;

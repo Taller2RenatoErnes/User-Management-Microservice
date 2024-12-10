@@ -20,7 +20,6 @@ class Server {
 
         this.middlewares();
         this.dBConnection();
-        this.routes();
         this.initGrpcServer();
     }
 
@@ -45,10 +44,6 @@ class Server {
         this.app.use(logger('dev'));
         this.app.use(cors());
         this.app.use(express.json());
-    }
-
-    routes() {
-        // Define las rutas HTTP aquí si es necesario
     }
 
     initGrpcServer() {
@@ -84,15 +79,37 @@ class Server {
     }
 
     grpcLogin(call, callback) {
+        console.log('gRPC Login - Inicio de sesión:', call.request);
+    
+        if (!call.request || typeof call.request !== 'object') {
+            console.error('gRPC Login - Request inválido:', call.request);
+            return callback(null, {
+                token: "",
+                error: true,
+                message: "Solicitud inválida. No se enviaron datos.",
+            });
+        }
+    
         const { email, password } = call.request;
-        userController.login({ body: { email, password } }, {
-            status: (code) => ({
-                json: (response) => callback(null, response),
-            }),
-        }).catch((err) => {
-            callback({ code: grpc.status.INTERNAL, message: err.message });
+    
+        if (!email || !password) {
+            console.error('gRPC Login - Faltan campos obligatorios:', call.request);
+            return callback(null, {
+                token: "",
+                error: true,
+                message: "Faltan campos obligatorios: email y/o password.",
+            });
+        }
+    
+        console.log('gRPC Login - Llamando a userController.login');
+        userController.login(call, callback).catch((err) => {
+            console.error("Error en gRPC Login - SERVER:", err);
+            callback({ code: grpc.status.INTERNAL, message: "Error interno del servidor." });
         });
     }
+    
+    
+    
 
     grpcGetProfile(call, callback) {
         const { token } = call.request;
@@ -144,14 +161,24 @@ class Server {
 
     grpcCreateUser(call, callback) {
         const { name, firstLastname, secondLastname, rut, email, password, idCareer } = call.request;
+        if (!name || !firstLastname || !secondLastname || !rut || !email || !password || !idCareer) {
+            return callback(null, {
+                id: "",
+                error: true,
+                message: "Todos los campos son obligatorios.",
+            });
+        }
+    
         userController.createUser({ body: { name, firstLastname, secondLastname, rut, email, password, idCareer } }, {
             status: (code) => ({
                 json: (response) => callback(null, response),
             }),
         }).catch((err) => {
-            callback({ code: grpc.status.INTERNAL, message: err.message });
+            console.error("Error en grpcCreateUser:", err);
+            callback({ code: grpc.status.INTERNAL, message: "Error interno del servidor." });
         });
     }
+    
 
     listen() {
         this.Server.listen(this.port, () => {
