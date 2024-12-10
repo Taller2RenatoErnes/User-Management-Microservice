@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { Users } = require('../models/database/indexDB');
+const { User } = require('../models/database/indexDB');
 const grpc = require('@grpc/grpc-js');
 
 /**
@@ -38,22 +38,33 @@ const generateToken = (id = '') => {
 const validateJWTGrpc = async (call, callback, next) => {
     try {
         const metadata = call.metadata;
-        const token = metadata.get('authorization')[0]; // Extraemos el token del metadata
-        
-        if (!token) {
+        const authorization = metadata.get('authorization')[0]; // Extraer el valor del metadato 'authorization'
+
+        if (!authorization) {
             return callback({
                 code: grpc.status.UNAUTHENTICATED,
-                details: 'No se ha proporcionado un token de autenticación'
+                details: 'No se ha proporcionado un token de autenticación',
             });
         }
 
+        const tokenParts = authorization.split(' ');
+        if (tokenParts[0] !== 'Bearer' || !tokenParts[1]) {
+            return callback({
+                code: grpc.status.UNAUTHENTICATED,
+                details: 'Formato de token inválido. Use Bearer <token>',
+            });
+        }
+
+        const token = tokenParts[1]; 
+
         const { id } = jwt.verify(token, process.env.SECRET);
-        const user = await Users.findByPk(id);
+
+        const user = await User.findByPk(id);
 
         if (!user) {
             return callback({
                 code: grpc.status.UNAUTHENTICATED,
-                details: 'Token inválido, usuario no encontrado'
+                details: 'Token inválido, usuario no encontrado',
             });
         }
 
@@ -63,15 +74,33 @@ const validateJWTGrpc = async (call, callback, next) => {
         if (error.name === 'TokenExpiredError') {
             return callback({
                 code: grpc.status.UNAUTHENTICATED,
-                message: 'Token expirado'
+                details: 'Token expirado',
             });
         }
 
         return callback({
             code: grpc.status.UNAUTHENTICATED,
-            message: 'Token no válido'
+            details: 'Token no válido',
         });
     }
 };
 
-module.exports = { validateJWTGrpc, getIdJWT, generateToken };
+const getTokenAuth = (call) => {
+    const metadata = call.metadata;
+    const authorization = metadata.get('authorization')[0];
+    if (!authorization) {
+        return null;
+    }
+
+    const tokenParts = authorization.split(' ');
+    if (tokenParts[0] !== 'Bearer' || !tokenParts[1]) {
+        return
+    }
+
+    const token = tokenParts[1];
+
+    return token;
+};
+
+
+module.exports = { validateJWTGrpc, getIdJWT, generateToken, getTokenAuth};

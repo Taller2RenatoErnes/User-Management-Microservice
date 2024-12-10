@@ -1,6 +1,9 @@
 const { User, Progress } = require('../models/database/indexDB.js');
 const bcrypt = require('bcrypt');
-const {generateToken} = require('../middleware/jwt.js');
+const grpc = require('@grpc/grpc-js');
+const {generateToken, getIdJWT} = require('../middleware/jwt.js');
+const jwt = require('jsonwebtoken');
+
 const login = async (request) => {
     console.log('Inicio de sesión', request);
 
@@ -41,13 +44,23 @@ const login = async (request) => {
 };
 
 
-
-
-
-const getUsers = async (req, res) => {
+const getUser = async (request) => {
     try {
-        const user = req.user;
-        return res.status(200).json({
+        const token = request;
+
+        console.log ('Token:', token);
+
+        const id = getIdJWT(token);
+
+        if (!id) {
+            return Promise.resolve({ error:true, message: 'Faltan campos obligatorios: id'});
+        }
+
+        const user = await User.findByPk(id);
+
+        console.log('Usuario:', user);
+
+        return Promise.resolve({
             id: user.id,
             name: user.name,
             firstLastname: user.firstLastname,
@@ -58,7 +71,7 @@ const getUsers = async (req, res) => {
         });
     } catch (error) {
         console.log('Error en /profile:', error);
-        return res.status(500).json({ message: 'Error al obtener el perfil.' });
+        return Promise.reject({ code: grpc.status.INTERNAL, message: 'Error al obtener el perfil.' });
     }
 }
 
@@ -138,7 +151,7 @@ const createUser = async (req, res) => {
 }
 
 module.exports = {
-    getUsers,
+    getUser,
     getProgress,
     updateProfile,
     updateProgress,

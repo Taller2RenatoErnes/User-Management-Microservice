@@ -23,7 +23,6 @@ message LoginResponse {
 }
 
 message ProfileRequest {
-    string token = 1;
 }
 
 message ProfileResponse {
