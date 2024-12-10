@@ -1,11 +1,11 @@
 const { User, Progress } = require('../models/database/indexDB.js');
 const bcrypt = require('bcrypt');
+const {generateToken} = require('../middleware/jwt.js');
+const login = async (request) => {
+    console.log('Inicio de sesión', request);
 
-const login = async (call, callback) => {
-    console.log('Inicio de sesión',  call.request);
-
-    if (!call.request || !call.request.email || !call.request.password) {
-        return callback(null, {
+    if (!request || !request.email || !request.password) {
+        return Promise.resolve({
             token: "",
             error: true,
             message: "Campos faltantes: email y/o password.",
@@ -13,26 +13,34 @@ const login = async (call, callback) => {
     }
 
     try {
-        const { email, password } = call.request;
+        const { email, password } = request;
         const user = await User.findOne({ where: { email } });
 
         if (!user) {
-            return callback(null, { token: "", error: true, message: 'Credenciales inválidas' });
+            return Promise.resolve({ token: "", error: true, message: 'Credenciales inválidas' });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (!isPasswordValid) {
-            return callback(null, { token: "", error: true, message: 'Credenciales inválidas' });
+            return Promise.resolve({ token: "", error: true, message: 'Credenciales inválidas' });
         }
 
-        return callback(null, { token: user.id, error: false, message: 'Inicio de sesión exitoso' });
+        const token =await  generateToken(user.id);
+
+        return Promise.resolve({
+            token, 
+            error: false, 
+            message: 'Inicio de sesión exitoso'
+        });
 
     } catch (error) {
         console.error('Error en gRPC Login:', error);
-        return callback({ code: grpc.status.INTERNAL, message: 'Error al iniciar sesión.' });
+        return Promise.reject({ code: grpc.status.INTERNAL, message: 'Error al iniciar sesión.' });
     }
 };
+
+
 
 
 

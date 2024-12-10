@@ -5,6 +5,7 @@ const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const { sequelize, User, Progress } = require('./database/indexDB.js');
 const userController = require('../controllers/usersController.js');
+const {validateJWTGrpc} = require('../middleware/jwt.js')
 
 
 class Server {
@@ -52,22 +53,51 @@ class Server {
             longs: String,
             enums: String,
             defaults: true,
-            oneofs: true,
         });
+
         const proto = grpc.loadPackageDefinition(packageDefinition).usermanagement;
 
         this.grpcServer = new grpc.Server();
 
-        // Registro de servicios gRPC
         this.grpcServer.addService(proto.UserService.service, {
-            Login: this.grpcLogin.bind(this),
-            GetProfile: this.grpcGetProfile.bind(this),
-            UpdateProfile: this.grpcUpdateProfile.bind(this),
-            GetProgress: this.grpcGetProgress.bind(this),
-            UpdateProgress: this.grpcUpdateProgress.bind(this),
-            CreateUser: this.grpcCreateUser.bind(this),
+            
+            Login: this.grpcLogin,
+        
+            // GetProfile - Aplicando validateJWTGrpc
+            GetProfile: (call, callback) => {
+                validateJWTGrpc(call, callback, () => {
+                    this.grpcGetProfile(call, callback); // Llamamos a la lógica de GetProfile después de la validación
+                });
+            },
+        
+            // UpdateProfile - Aplicando validateJWTGrpc
+            UpdateProfile: (call, callback) => {
+                validateJWTGrpc(call, callback, () => {
+                    this.grpcUpdateProfile(call, callback); // Llamamos a la lógica de UpdateProfile después de la validación
+                });
+            },
+        
+            // GetProgress - Aplicando validateJWTGrpc
+            GetProgress: (call, callback) => {
+                validateJWTGrpc(call, callback, () => {
+                    this.grpcGetProgress(call, callback); // Llamamos a la lógica de GetProgress después de la validación
+                });
+            },
+        
+            // UpdateProgress - Aplicando validateJWTGrpc
+            UpdateProgress: (call, callback) => {
+                validateJWTGrpc(call, callback, () => {
+                    this.grpcUpdateProgress(call, callback); // Llamamos a la lógica de UpdateProgress después de la validación
+                });
+            },
+        
+            // CreateUser - Aplicando validateJWTGrpc
+            CreateUser: (call, callback) => {
+                validateJWTGrpc(call, callback, () => {
+                    this.grpcCreateUser(call, callback); // Llamamos a la lógica de CreateUser después de la validación
+                });
+            }
         });
-
         this.grpcServer.bindAsync(`0.0.0.0:${this.grpcPort}`, grpc.ServerCredentials.createInsecure(), (err, port) => {
             if (err) {
                 console.error('Error iniciando el servidor gRPC:', err);
@@ -78,7 +108,7 @@ class Server {
         });
     }
 
-    grpcLogin(call, callback) {
+    grpcLogin = (call, callback) => {
         console.log('gRPC Login - Inicio de sesión:', call.request);
     
         if (!call.request || typeof call.request !== 'object') {
@@ -101,16 +131,23 @@ class Server {
             });
         }
     
-        console.log('gRPC Login - Llamando a userController.login');
-        userController.login(call, callback).catch((err) => {
-            console.error("Error en gRPC Login - SERVER:", err);
-            callback({ code: grpc.status.INTERNAL, message: "Error interno del servidor." });
-        });
-    }
-    
-    
-    
-
+        userController.login(call.request)
+            .then((response) => {
+                console.log("Respuesta en server.js", response);
+                callback(null, {
+                    token: String (response.token),
+                    error: response.error,
+                    message: response.message,
+                });
+            }).finally(() => {
+                console.log('gRPC Login - Fin de la operación');
+            })
+            .catch((error) => {
+                console.error("Error en gRPC Login - SERVER:", error);
+                callback({ token:'', error: true, message: "Error interno del servidor." });
+            });
+    };
+        
     grpcGetProfile(call, callback) {
         const { token } = call.request;
         const user = { id: token }; // Simulación de usuario con token
