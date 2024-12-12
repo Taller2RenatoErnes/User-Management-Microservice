@@ -66,13 +66,11 @@ const User = sequelize.define('User', {
 });
 
 
-// Hook para hashear la contraseña antes de crear el usuario
 User.beforeCreate(async (user) => {
     const saltRounds = 10;
     user.contraseña = await bcrypt.hash(user.contraseña, saltRounds);
 });
 
-// Hook para hashear la contraseña si se modifica
 User.beforeUpdate(async (user) => {
     if (user.changed('contraseña')) {
         const saltRounds = 10;

@@ -100,7 +100,6 @@ const getProgress = async (request) => {
     }
 };
 
-
 const updateProgress = async (request) => {
     try {
         const { token, approvedCourses, removedCourses } = request;
@@ -108,76 +107,90 @@ const updateProgress = async (request) => {
         if (!token) {
             return Promise.reject({ code: grpc.status.UNAUTHENTICATED, message: 'Token inválido.' });
         }
+
         const id = getIdJWT(token);
         if (!id) {
             return Promise.reject({ code: grpc.status.UNAUTHENTICATED, message: 'Token inválido.' });
         }
 
         if (
-            (!approvedCourses || !Array.isArray(approvedCourses)) &&
-            (!removedCourses || !Array.isArray(removedCourses))
+            (!approvedCourses || approvedCourses.length === 0) &&
+            (!removedCourses || removedCourses.length === 0)
         ) {
-            return Promise.reject({ code: grpc.status.INVALID_ARGUMENT, message: 'Cursos inválidos.' });
+            return Promise.reject({ code: grpc.status.INVALID_ARGUMENT, message: 'No se proporcionaron cursos para actualizar.' });
         }
 
+        // Obtener todas las asignaturas inscritas por el usuario
         const totalCourses = await Progress.findAll({
             where: { idUser: id },
+            attributes: ['asignatureCode', 'state'],
         });
 
-        const totalCourseCodes = totalCourses.map((course) => course.asignatureCode);
+        // Normalizar códigos como strings para la validación
+        const totalCourseCodes = totalCourses.map((course) => course.asignatureCode.toString());
 
-        const invalidApproved = approvedCourses.filter((course) => !totalCourseCodes.includes(course));
-        const invalidRemoved = removedCourses.filter((course) => !totalCourseCodes.includes(course));
+        // Verificar que todos los cursos proporcionados existan en los inscritos
+        const allProvidedCourses = [...approvedCourses, ...removedCourses];
+        const invalidCourses = allProvidedCourses.filter((course) => !totalCourseCodes.includes(course));
 
-        if (invalidApproved.length > 0 || invalidRemoved.length > 0) {
+        if (invalidCourses.length > 0) {
             return Promise.reject({
                 code: grpc.status.INVALID_ARGUMENT,
-                message: `Los siguientes cursos no están inscritos: ${
-                    invalidApproved.length > 0
-                        ? `Aprobar: ${invalidApproved.join(', ')}`
-                        : ''
-                } ${
-                    invalidRemoved.length > 0
-                        ? `Remover: ${invalidRemoved.join(', ')}`
-                        : ''
-                }`.trim(),
+                message: `Los siguientes cursos no están inscritos: ${invalidCourses.join(', ')}`,
             });
         }
 
-        const currentApprovedCourses = await Progress.findAll({
-            where: { idUser: id, state: 'approved' },
-        });
+        // Validar cursos a aprobar (estado debe ser distinto a 'approved')
+        const coursesToApprove = totalCourses.filter((course) =>
+            approvedCourses.includes(course.asignatureCode.toString())
+        );
+        const alreadyApproved = coursesToApprove.filter((course) => course.state === 'approved');
 
-        const currentApprovedCodes = currentApprovedCourses.map((course) => course.asignatureCode);
-
-        const invalidRemovals = removedCourses.filter((course) => !currentApprovedCodes.includes(course));
-
-        if (invalidRemovals.length > 0) {
+        if (alreadyApproved.length > 0) {
             return Promise.reject({
                 code: grpc.status.INVALID_ARGUMENT,
-                message: `Los siguientes cursos no se encuentran aprobados: ${invalidRemovals.join(', ')}`,
+                message: `Los siguientes cursos ya están aprobados: ${alreadyApproved
+                    .map((course) => course.asignatureCode)
+                    .join(', ')}`,
             });
         }
 
-    
+        // Validar cursos a remover (estado debe ser 'approved')
+        const coursesToRemove = totalCourses.filter((course) =>
+            removedCourses.includes(course.asignatureCode.toString())
+        );
+        const notApproved = coursesToRemove.filter((course) => course.state !== 'approved');
 
+        if (notApproved.length > 0) {
+            return Promise.reject({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: `Los siguientes cursos no se encuentran aprobados: ${notApproved
+                    .map((course) => course.asignatureCode)
+                    .join(', ')}`,
+            });
+        }
+
+        // Actualizar los cursos a aprobados
         if (approvedCourses && approvedCourses.length > 0) {
-            await Promise.all(
-                approvedCourses.map(async (courseCode) => {
-                    await Progress.upsert({
-                        idUser: id,
-                        asignatureCode: courseCode,
-                        state: 'approved',
-                        lastTimeUpdated: new Date(),
-                    });
-                })
-            );
+            for (const courseCode of approvedCourses) {
+                await Progress.update(
+                    { state: 'approved', lastTimeUpdated: new Date() },
+                    { where: { idUser: id, asignatureCode: parseInt(courseCode) } } // Convertir a entero
+                );
+            }
         }
 
+        // Actualizar los cursos a estado fallido
         if (removedCourses && removedCourses.length > 0) {
             await Progress.update(
                 { state: 'failed', lastTimeUpdated: new Date() },
-                { where: { idUser: id, asignatureCode: removedCourses, state: 'approved' } }
+                {
+                    where: {
+                        idUser: id,
+                        asignatureCode: removedCourses.map((course) => parseInt(course)), // Convertir a entero
+                        state: 'approved',
+                    },
+                }
             );
         }
 
@@ -187,8 +200,6 @@ const updateProgress = async (request) => {
         return Promise.reject({ code: grpc.status.INTERNAL, message: 'Error al actualizar el progreso.' });
     }
 };
-
-
 
 
 const updateProfile = async (req, res) => {
