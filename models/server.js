@@ -164,6 +164,24 @@ class Server {
             callback({ code: grpc.status.INTERNAL, message: err.message });
         });
     }
+
+
+    grpcUpdateProgress(call, callback) {
+        const {approvedCourses, removedCourses } = call.request;
+        const token = getTokenAuth(call);
+
+        console.log(approvedCourses, removedCourses, token);
+
+        userController.updateProgress({ token, approvedCourses, removedCourses }).then((response) => {
+            callback(null, response);
+        }).finally(() => {
+            console.log('gRPC UpdateProgress - Fin de la operación');
+        }).catch((err) => {
+            callback({ code: grpc.status.INTERNAL, message: err.message });
+        });
+    }
+
+
     grpcUpdateProfile(call, callback) {
         const { token, name, firstLastname, secondLastname } = call.request;
         const user = { id: token }; // Simulación de usuario con token
@@ -176,18 +194,6 @@ class Server {
         });
     }
 
-
-    grpcUpdateProgress(call, callback) {
-        const { token, approvedCourses, removedCourses } = call.request;
-        const user = { id: token }; // Simulación de usuario con token
-        userController.updateProgress({ user, body: { approvedCourses, removedCourses } }, {
-            status: (code) => ({
-                json: (response) => callback(null, response),
-            }),
-        }).catch((err) => {
-            callback({ code: grpc.status.INTERNAL, message: err.message });
-        });
-    }
 
     grpcCreateUser(call, callback) {
         const { name, firstLastname, secondLastname, rut, email, password, idCareer } = call.request;

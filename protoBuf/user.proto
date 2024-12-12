@@ -55,12 +55,11 @@ message ProgressResponse {
 }
 
 message CourseProgress {
-    string courseCode = 1;
-    string status = 2;
+    string asignatureCode = 1;
+    string state = 2;
 }
 
 message UpdateProgressRequest {
-    string token = 1;
     repeated string approvedCourses = 2;
     repeated string removedCourses = 3;
 }

@@ -1,8 +1,9 @@
 const { User, Progress } = require('../models/database/indexDB.js');
 const bcrypt = require('bcrypt');
 const grpc = require('@grpc/grpc-js');
-const {generateToken, getIdJWT} = require('../middleware/jwt.js');
-const jwt = require('jsonwebtoken');
+const { generateToken, getIdJWT } = require('../middleware/jwt.js');
+const { createProgress, getProgressesUsers } = require('./progressController.js');
+
 
 const login = async (request) => {
     console.log('Inicio de sesión', request);
@@ -29,11 +30,11 @@ const login = async (request) => {
             return Promise.resolve({ token: "", error: true, message: 'Credenciales inválidas' });
         }
 
-        const token =await  generateToken(user.id);
+        const token = await generateToken(user.id);
 
         return Promise.resolve({
-            token, 
-            error: false, 
+            token,
+            error: false,
             message: 'Inicio de sesión exitoso'
         });
 
@@ -51,7 +52,7 @@ const getUser = async (request) => {
         const id = getIdJWT(token);
 
         if (!id) {
-            return Promise.resolve({ error:true, message: 'Faltan campos obligatorios: id'});
+            return Promise.resolve({ error: true, message: 'Faltan campos obligatorios: id' });
         }
 
         const user = await User.findByPk(id);
@@ -73,7 +74,7 @@ const getUser = async (request) => {
 
 const getProgress = async (request) => {
     try {
-        const token = request; 
+        const token = request;
         const id = getIdJWT(token);
 
         if (!id) {
@@ -85,11 +86,12 @@ const getProgress = async (request) => {
         });
 
 
-        const progressesMap = progresses.map((item) => ({
-            courseCode: item.asignatureCode.toString(), 
-            status: item.state,
-            lastTimeUpdated: item.lastTimeUpdated,
-        }));
+        const progressesMap = progresses.map((item) => (
+            {
+                asignatureCode: item.asignatureCode.toString(),
+                state: item.state,
+                lastTimeUpdated: item.lastTimeUpdated,
+            }));
 
         return Promise.resolve({ progress: progressesMap });
     } catch (error) {
@@ -97,6 +99,96 @@ const getProgress = async (request) => {
         return Promise.reject({ code: grpc.status.INTERNAL, message: 'Error al obtener el progreso.' });
     }
 };
+
+
+const updateProgress = async (request) => {
+    try {
+        const { token, approvedCourses, removedCourses } = request;
+
+        if (!token) {
+            return Promise.reject({ code: grpc.status.UNAUTHENTICATED, message: 'Token inválido.' });
+        }
+        const id = getIdJWT(token);
+        if (!id) {
+            return Promise.reject({ code: grpc.status.UNAUTHENTICATED, message: 'Token inválido.' });
+        }
+
+        if (
+            (!approvedCourses || !Array.isArray(approvedCourses)) &&
+            (!removedCourses || !Array.isArray(removedCourses))
+        ) {
+            return Promise.reject({ code: grpc.status.INVALID_ARGUMENT, message: 'Cursos inválidos.' });
+        }
+
+        const totalCourses = await Progress.findAll({
+            where: { idUser: id },
+        });
+
+        const totalCourseCodes = totalCourses.map((course) => course.asignatureCode);
+
+        const invalidApproved = approvedCourses.filter((course) => !totalCourseCodes.includes(course));
+        const invalidRemoved = removedCourses.filter((course) => !totalCourseCodes.includes(course));
+
+        if (invalidApproved.length > 0 || invalidRemoved.length > 0) {
+            return Promise.reject({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: `Los siguientes cursos no están inscritos: ${
+                    invalidApproved.length > 0
+                        ? `Aprobar: ${invalidApproved.join(', ')}`
+                        : ''
+                } ${
+                    invalidRemoved.length > 0
+                        ? `Remover: ${invalidRemoved.join(', ')}`
+                        : ''
+                }`.trim(),
+            });
+        }
+
+        const currentApprovedCourses = await Progress.findAll({
+            where: { idUser: id, state: 'approved' },
+        });
+
+        const currentApprovedCodes = currentApprovedCourses.map((course) => course.asignatureCode);
+
+        const invalidRemovals = removedCourses.filter((course) => !currentApprovedCodes.includes(course));
+
+        if (invalidRemovals.length > 0) {
+            return Promise.reject({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: `Los siguientes cursos no se encuentran aprobados: ${invalidRemovals.join(', ')}`,
+            });
+        }
+
+    
+
+        if (approvedCourses && approvedCourses.length > 0) {
+            await Promise.all(
+                approvedCourses.map(async (courseCode) => {
+                    await Progress.upsert({
+                        idUser: id,
+                        asignatureCode: courseCode,
+                        state: 'approved',
+                        lastTimeUpdated: new Date(),
+                    });
+                })
+            );
+        }
+
+        if (removedCourses && removedCourses.length > 0) {
+            await Progress.update(
+                { state: 'failed', lastTimeUpdated: new Date() },
+                { where: { idUser: id, asignatureCode: removedCourses, state: 'approved' } }
+            );
+        }
+
+        return Promise.resolve({ message: 'Progreso actualizado exitosamente.' });
+    } catch (error) {
+        console.error('Error en /update-progress:', error);
+        return Promise.reject({ code: grpc.status.INTERNAL, message: 'Error al actualizar el progreso.' });
+    }
+};
+
+
 
 
 const updateProfile = async (req, res) => {
@@ -115,39 +207,6 @@ const updateProfile = async (req, res) => {
     }
 }
 
-const updateProgress = async (req, res) => {
-    try {
-        const { approvedCourses, removedCourses } = req.body;  // Se espera un objeto con los cursos aprobados y eliminados
-
-        // Actualizar cursos aprobados
-        if (approvedCourses && Array.isArray(approvedCourses)) {
-            for (let courseCode of approvedCourses) {
-                await Progress.create({
-                    userId: req.user.id,
-                    courseCode,
-                    status: 'approved',
-                });
-            }
-        }
-
-        if (removedCourses && Array.isArray(removedCourses)) {
-            for (let courseCode of removedCourses) {
-                await Progress.destroy({
-                    where: {
-                        userId: req.user.id,
-                        courseCode,
-                    },
-                });
-            }
-        }
-
-        return res.status(200).json({ message: 'Progreso actualizado exitosamente.' });
-    } catch (error) {
-        console.log('Error en /my-progress (PATCH):', error);
-        return res.status(500).json({ message: 'Error al actualizar el progreso.' });
-    }
-
-}
 
 const createUser = async (req, res) => {
     try {

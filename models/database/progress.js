@@ -22,7 +22,8 @@ const Progress = sequelize.define('Progress', {
     },
     lastTimeUpdated:{
         type: DataTypes.DATE,
-        allowNull: false
+        allowNull: false,
+        defaultValue: DataTypes.NOW
     }
 }, {
     timestamps: true,

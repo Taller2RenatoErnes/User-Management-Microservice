@@ -13,3 +13,20 @@ createProgress = async (req, res)=>{
         return res.status(500).json({ message: 'Error al crear el progreso.' });
     }
 }
+
+
+const getProgressesUsers = async (id) => {
+    try {
+        const progress = await Progress.findAll({
+            where: {
+                idUser: id
+            }
+        });
+        return Promise.resolve(progress);
+
+    } catch (error) {
+        console.error('Error en /get-progress:', error);
+        return Promise.reject({ code: grpc.status.INTERNAL, message: 'Error al obtener el progreso.' });
+    }
+}
+module.exports = {getProgressesUsers, createProgress};
