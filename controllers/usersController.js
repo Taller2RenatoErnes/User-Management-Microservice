@@ -48,8 +48,6 @@ const getUser = async (request) => {
     try {
         const token = request;
 
-        console.log ('Token:', token);
-
         const id = getIdJWT(token);
 
         if (!id) {
@@ -57,8 +55,6 @@ const getUser = async (request) => {
         }
 
         const user = await User.findByPk(id);
-
-        console.log('Usuario:', user);
 
         return Promise.resolve({
             id: user.id,
@@ -75,6 +71,34 @@ const getUser = async (request) => {
     }
 }
 
+const getProgress = async (request) => {
+    try {
+        const token = request; 
+        const id = getIdJWT(token);
+
+        if (!id) {
+            return Promise.resolve({ error: true, message: 'Usuario no autorizado' });
+        }
+
+        const progresses = await Progress.findAll({
+            where: { idUser: id },
+        });
+
+
+        const progressesMap = progresses.map((item) => ({
+            courseCode: item.asignatureCode.toString(), 
+            status: item.state,
+            lastTimeUpdated: item.lastTimeUpdated,
+        }));
+
+        return Promise.resolve({ progress: progressesMap });
+    } catch (error) {
+        console.log('Error en /my-progress:', error);
+        return Promise.reject({ code: grpc.status.INTERNAL, message: 'Error al obtener el progreso.' });
+    }
+};
+
+
 const updateProfile = async (req, res) => {
     try {
         const { name, firstLastname, secondLastname } = req.body;
@@ -88,19 +112,6 @@ const updateProfile = async (req, res) => {
     } catch (error) {
         console.log('Error en /update-profile:', error);
         return res.status(500).json({ message: 'Error al actualizar el perfil.' });
-    }
-}
-
-const getProgress = async (req, res) => {
-    try {
-        const progress = await Progress.findAll({
-            where: { userId: req.user.id },  // Relacionamos el progreso con el usuario
-        });
-
-        return res.status(200).json(progress);
-    } catch (error) {
-        console.log('Error en /my-progress:', error);
-        return res.status(500).json({ message: 'Error al obtener el progreso.' });
     }
 }
 

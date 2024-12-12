@@ -69,15 +69,15 @@ class Server {
                 });
             },
 
-            UpdateProfile: (call, callback) => {
-                validateJWTGrpc(call, callback, () => {
-                    this.grpcUpdateProfile(call, callback);
-                });
-            },
-
             GetProgress: (call, callback) => {
                 validateJWTGrpc(call, callback, () => {
                     this.grpcGetProgress(call, callback);
+                });
+            },
+
+            UpdateProfile: (call, callback) => {
+                validateJWTGrpc(call, callback, () => {
+                    this.grpcUpdateProfile(call, callback);
                 });
             },
 
@@ -153,6 +153,17 @@ class Server {
         });
     }
 
+    grpcGetProgress(call, callback) {
+        const token  = getTokenAuth(call);
+        userController.getProgress(token).then((response) => {
+            callback(null, response);
+        }).finally(() => {
+            console.log('gRPC GetProgress - Fin de la operación');
+        }).catch((err) => {
+            console.error("Error en grpcGetProgress:", err);
+            callback({ code: grpc.status.INTERNAL, message: err.message });
+        });
+    }
     grpcUpdateProfile(call, callback) {
         const { token, name, firstLastname, secondLastname } = call.request;
         const user = { id: token }; // Simulación de usuario con token
@@ -165,17 +176,6 @@ class Server {
         });
     }
 
-    grpcGetProgress(call, callback) {
-        const { token } = call.request;
-        const user = { id: token }; // Simulación de usuario con token
-        userController.getProgress({ user }, {
-            status: (code) => ({
-                json: (response) => callback(null, response),
-            }),
-        }).catch((err) => {
-            callback({ code: grpc.status.INTERNAL, message: err.message });
-        });
-    }
 
     grpcUpdateProgress(call, callback) {
         const { token, approvedCourses, removedCourses } = call.request;
