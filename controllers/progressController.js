@@ -1,18 +1,54 @@
-const express = require('express');
-const app = express();
 const {Progress} = require('../models/database/indexDB.js');
 
-createProgress = async (req, res)=>{
+const grpc = require('@grpc/grpc-js');
+
+const createProgress = async (request)=>{
     try {
-        const { idUser, asignatureCode, state} = req.body;
+        const { idUser, asignatureCode, state} = request;
+
+        if (!idUser || !asignatureCode || !state) {
+            return Promise.resolve({ error: true, message: 'Faltan campos obligatorios: idUser, asignatureCode, state' });
+        }
+
+        if (Progress.findOne({ where: { idUser, asignatureCode } })) {
+            return Promise.resolve({ error: true, message: 'Ya existe un progreso con estos datos, debe actualizar no crear.' });
+        }
+
         const newProgress = await Progress.create({ idUser, asignatureCode, state, lastTimeUpdated: new Date() });
 
-        return res.status(201).json(newProgress);
+        return Promise.resolve(newProgress);
+
     } catch (error) {
         console.log('Error en /progress:', error);
-        return res.status(500).json({ message: 'Error al crear el progreso.' });
+        return Promise.reject({ code: grpc.status.INTERNAL, message: 'Error al crear el progreso.' });
     }
 }
+
+const updateProgress = async (request) => {
+    try{
+        const { idUser, asignatureCode, state } = request;
+
+        if (!idUser || !asignatureCode || !state) {
+            return Promise.resolve({ error: true, message: 'Faltan campos obligatorios: idUser, asignatureCode, state' });
+        }
+
+        const progress = await Progress.findOne({ where: { idUser, asignatureCode } });
+
+        if (!progress) {
+            return Promise.resolve({ error: true, message: 'No existe un progreso con estos datos, debe crear no actualizar.' });
+        }
+        progress.state = state;
+        progress.lastTimeUpdated = new Date();
+        await progress.save();
+
+        return Promise.resolve(progress);
+
+    } catch (error) {
+        console.error('Error en /progress:', error);
+        return Promise.reject({ code: grpc.status.INTERNAL, message: 'Error al actualizar el progreso.' });
+    }
+}
+
 
 
 const getProgressesUsers = async (id) => {
@@ -29,4 +65,4 @@ const getProgressesUsers = async (id) => {
         return Promise.reject({ code: grpc.status.INTERNAL, message: 'Error al obtener el progreso.' });
     }
 }
-module.exports = {getProgressesUsers, createProgress};
+module.exports = {getProgressesUsers, createProgress, updateProgress};
