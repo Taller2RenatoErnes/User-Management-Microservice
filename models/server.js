@@ -13,7 +13,7 @@ class Server {
         this.app = express();
         this.port = process.env.PORT || 3000;
         this.Server = require('http').createServer(this.app);
-        this.grpcPort = 50051;
+        this.grpcPort = process.env.GRPC_PORT || 50051;
         this.paths = {
             users: '/api/users',
         };
