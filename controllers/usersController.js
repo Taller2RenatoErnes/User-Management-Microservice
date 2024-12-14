@@ -120,16 +120,13 @@ const updateProgress = async (request) => {
             return Promise.reject({ code: grpc.status.INVALID_ARGUMENT, message: 'No se proporcionaron cursos para actualizar.' });
         }
 
-        // Obtener todas las asignaturas inscritas por el usuario
         const totalCourses = await Progress.findAll({
             where: { idUser: id },
             attributes: ['asignatureCode', 'state'],
         });
 
-        // Normalizar códigos como strings para la validación
         const totalCourseCodes = totalCourses.map((course) => course.asignatureCode.toString());
 
-        // Verificar que todos los cursos proporcionados existan en los inscritos
         const allProvidedCourses = [...approvedCourses, ...removedCourses];
         const invalidCourses = allProvidedCourses.filter((course) => !totalCourseCodes.includes(course));
 
@@ -140,7 +137,6 @@ const updateProgress = async (request) => {
             });
         }
 
-        // Validar cursos a aprobar (estado debe ser distinto a 'approved')
         const coursesToApprove = totalCourses.filter((course) =>
             approvedCourses.includes(course.asignatureCode.toString())
         );
@@ -155,7 +151,6 @@ const updateProgress = async (request) => {
             });
         }
 
-        // Validar cursos a remover (estado debe ser 'approved')
         const coursesToRemove = totalCourses.filter((course) =>
             removedCourses.includes(course.asignatureCode.toString())
         );
@@ -170,7 +165,6 @@ const updateProgress = async (request) => {
             });
         }
 
-        // Actualizar los cursos a aprobados
         if (approvedCourses && approvedCourses.length > 0) {
             for (const courseCode of approvedCourses) {
                 await Progress.update(
@@ -180,7 +174,6 @@ const updateProgress = async (request) => {
             }
         }
 
-        // Actualizar los cursos a estado fallido
         if (removedCourses && removedCourses.length > 0) {
             await Progress.update(
                 { state: 'failed', lastTimeUpdated: new Date() },
@@ -219,15 +212,27 @@ const updateProfile = async (req, res) => {
 }
 
 
-const createUser = async (req, res) => {
+const createUser = async (request) => {
     try {
-        const { name, firstLastname, secondLastname, rut, email, password, idCareer } = req.body;
+        const { name, firstLastname, secondLastname, rut, email, password, idCareer } = request;
+
+        if (!name || !firstLastname || !secondLastname || !rut || !email || !password || !idCareer) {
+            return Promise.reject({ code: grpc.status.NOT_FOUND, error: true, message: 'Debe enviar todos los campos' });
+        }
+
+        if (await User.findOne({ where: { email } }) || await User.findOne({ where: { rut } })) {
+            return Promise.reject({ code: grpc.status.ALREADY_EXISTS, error: true, message: 'Usuario existente' });
+        }
         const newUser = await User.create({ name, firstLastname, secondLastname, rut, email, password, idCareer });
 
-        return res.status(201).json(newUser);
+        if (!newUser) {
+            return Promise.reject({ error: true, message: 'Error al crear el usuario.' });
+        }
+
+        return Promise.resolve({ error: false, message: 'Usuario creado exitosamente.' });
     } catch (error) {
         console.log('Error en /users:', error);
-        return res.status(500).json({ message: 'Error al crear el usuario.' });
+        return Promise.reject({ code: grpc.status.INTERNAL, message: 'Error al crear usuario: '+ error });
     }
 }
 

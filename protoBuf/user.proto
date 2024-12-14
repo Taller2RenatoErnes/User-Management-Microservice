@@ -79,5 +79,6 @@ message CreateUserRequest {
 }
 
 message CreateUserResponse {
-    string id = 1;
+    bool error = 1;
+    string message = 2;
 }

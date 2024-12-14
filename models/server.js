@@ -6,7 +6,7 @@ const protoLoader = require('@grpc/proto-loader');
 const { sequelize, User, Progress } = require('./database/indexDB.js');
 const userController = require('../controllers/usersController.js');
 const { validateJWTGrpc, getTokenAuth } = require('../middleware/jwt.js')
-
+const RabbitMQ = require('../services/rabbitMQService.js');
 
 class Server {
     constructor() {
@@ -39,6 +39,11 @@ class Server {
             console.log('Error de conexión en BDD: ', error);
             throw new Error(error);
         }
+    }
+
+    rabbitMQ() {
+        const rabbit = new RabbitMQ();
+        rabbit.setupRabbitMQ();
     }
 
     middlewares() {
@@ -87,11 +92,7 @@ class Server {
                 });
             },
 
-            CreateUser: (call, callback) => {
-                validateJWTGrpc(call, callback, () => {
-                    this.grpcCreateUser(call, callback);
-                });
-            }
+            CreateUser: this.grpcCreateUser,
 
         });
         this.grpcServer.bindAsync(`0.0.0.0:${this.grpcPort}`, grpc.ServerCredentials.createInsecure(), (err, port) => {
@@ -105,7 +106,6 @@ class Server {
     }
 
     grpcLogin = (call, callback) => {
-
         if (!call.request || typeof call.request !== 'object') {
             console.error('gRPC Login - Request inválido:', call.request);
             return callback(null, {
@@ -114,9 +114,7 @@ class Server {
                 message: "Solicitud inválida. No se enviaron datos.",
             });
         }
-
         const { email, password } = call.request;
-
         if (!email || !password) {
             return callback(null, {
                 token: "",
@@ -124,7 +122,6 @@ class Server {
                 message: "Faltan campos obligatorios: email y/o password.",
             });
         }
-
         userController.login(call.request)
             .then((response) => {
                 callback(null, {
@@ -154,7 +151,7 @@ class Server {
     }
 
     grpcGetProgress(call, callback) {
-        const token  = getTokenAuth(call);
+        const token = getTokenAuth(call);
         userController.getProgress(token).then((response) => {
             callback(null, response);
         }).finally(() => {
@@ -167,7 +164,7 @@ class Server {
 
 
     grpcUpdateProgress(call, callback) {
-        const {approvedCourses, removedCourses } = call.request;
+        const { approvedCourses, removedCourses } = call.request;
         const token = getTokenAuth(call);
 
         console.log(approvedCourses, removedCourses, token);
@@ -199,19 +196,17 @@ class Server {
         const { name, firstLastname, secondLastname, rut, email, password, idCareer } = call.request;
         if (!name || !firstLastname || !secondLastname || !rut || !email || !password || !idCareer) {
             return callback(null, {
-                id: "",
                 error: true,
                 message: "Todos los campos son obligatorios.",
             });
         }
 
-        userController.createUser({ body: { name, firstLastname, secondLastname, rut, email, password, idCareer } }, {
-            status: (code) => ({
-                json: (response) => callback(null, response),
-            }),
+        userController.createUser(call.request).then((response) => {
+            callback(null, response);
+        }).finally(() => {
+            console.log('gRPC CreateUser - Fin de la operación');
         }).catch((err) => {
-            console.error("Error en grpcCreateUser:", err);
-            callback({ code: grpc.status.INTERNAL, message: "Error interno del servidor." });
+            callback({ code: grpc.status.INTERNAL, message: err.message });
         });
     }
 

@@ -1,4 +1,14 @@
 services:
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - my_network
+
   usersManagement:
     image: postgres
     restart: always
@@ -10,6 +20,10 @@ services:
       - pgdata:/var/lib/postgresql/data 
     ports:
       - "5432:5432"
- 
+
+networks:
+  my_network:
+    driver: bridge
+
 volumes:
   pgdata:

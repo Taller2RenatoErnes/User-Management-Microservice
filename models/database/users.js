@@ -20,9 +20,7 @@ const User = sequelize.define('User', {
     firstLastname: {
         type: DataTypes.STRING(100),
         allowNull: false,
-        unique: true,
         validate: {
-            isEmail: true,
             notEmpty: true,
         },
     },
@@ -68,13 +66,13 @@ const User = sequelize.define('User', {
 
 User.beforeCreate(async (user) => {
     const saltRounds = 10;
-    user.contraseña = await bcrypt.hash(user.contraseña, saltRounds);
+    user.password = await bcrypt.hash(user.password, saltRounds);
 });
 
 User.beforeUpdate(async (user) => {
-    if (user.changed('contraseña')) {
+    if (user.changed('password')) {
         const saltRounds = 10;
-        user.contraseña = await bcrypt.hash(user.contraseña, saltRounds);
+        user.password = await bcrypt.hash(user.password, saltRounds);
     }
 });
 
