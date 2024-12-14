@@ -242,13 +242,71 @@ const createUser = async (request) => {
     }
 }
 
+const updatePassword = async (request, token) => {
+    try {
+        const id = getIdJWT(token);
+        if (!id) {
+            return Promise.reject({
+                code: grpc.status.UNAUTHENTICATED,
+                message: 'Token inválido.',
+            });
+        }
+
+        const { newPassword, passwordConfirm, oldPassword } = request;
+        if (!newPassword || !passwordConfirm || !oldPassword) {
+            return Promise.reject({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'Debe enviar todos los campos.',
+            });
+        }
+
+        if (newPassword !== passwordConfirm) {
+            return Promise.reject({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'Las contraseñas no coinciden.',
+            });
+        }
+
+        const user = await User.findByPk(id);
+        if (!user) {
+            return Promise.reject({
+                code: grpc.status.NOT_FOUND,
+                message: 'Usuario no encontrado.',
+            });
+        }
+
+        const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+        if (!isPasswordValid) {
+            return Promise.reject({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'Contraseña actual incorrecta.',
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await user.update({ password: hashedPassword });
+
+        await RabbitService.sendToQueue('update_pw_queue', {
+            operation: 'updatePw',
+            data: newPassword,
+        })
+
+        return Promise.resolve({ message: 'Contraseña actualizada exitosamente.' });
+    } catch (error) {
+        console.error('Error en updatePassword:', error);
+        return Promise.reject({ code: grpc.status.INTERNAL, message: 'Error al actualizar la contraseña.' });
+    }
+};
+
+
 module.exports = {
     getUser,
     getProgress,
     updateProfile,
     updateProgress,
     login,
-    createUser
+    createUser,
+    updatePassword,
 };
 
 

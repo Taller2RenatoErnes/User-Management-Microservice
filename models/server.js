@@ -214,6 +214,18 @@ class Server {
         });
     }
 
+    grpcUpdatePassword(call, callback) {
+        const token = getTokenAuth(call);
+        updatePassword(call.request, token)
+            .then((response) => {
+                callback(null, response);
+            })
+            .catch((err) => {
+                callback({ code: grpc.status.INTERNAL, message: err.message });            
+            });
+    }
+    
+
 
     listen() {
         this.Server.listen(this.port, () => {

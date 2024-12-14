@@ -9,6 +9,7 @@ service UserService {
     rpc GetProgress (ProgressRequest) returns (ProgressResponse);
     rpc UpdateProgress (UpdateProgressRequest) returns (UpdateProgressResponse);
     rpc CreateUser (CreateUserRequest) returns (CreateUserResponse);
+    rpc UpdatePassword (UpdatePasswordRequest) returns (UpdatePasswordResponse);
 }
 
 message LoginRequest {
@@ -81,4 +82,15 @@ message CreateUserRequest {
 message CreateUserResponse {
     bool error = 1;
     string message = 2;
+}
+
+message UpdatePasswordRequest {
+    string token = 1;            
+    string oldPassword = 2;     
+    string newPassword = 3;     
+    string passwordConfirm = 4; 
+}
+
+message UpdatePasswordResponse {
+    string message = 1;        
 }
