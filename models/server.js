@@ -18,7 +18,10 @@ class Server {
             users: '/api/users',
         };
         this.PROTO_PATH = './protoBuf/user.proto';
-
+        this.queues = {
+            register: 'register_queue',
+            password: 'update_pw_queue',
+        };
         this.middlewares();
         this.dBConnection();
         this.initGrpcServer();
@@ -43,7 +46,7 @@ class Server {
     }
 
     rabbitMQ() {
-        const rabbit = new RabbitMQ('register_queue');
+        const rabbit = new RabbitMQ([this.queues.password, this.queues.register]);
         rabbit.setupRabbitMQ();
     }
 

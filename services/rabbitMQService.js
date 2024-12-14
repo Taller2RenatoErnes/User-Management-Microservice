@@ -16,31 +16,35 @@ let channel;
 
 class RabbitService {
 
-    constructor(queueName) {
-
-        this.queueName = queueName;    
+    constructor(queues) {
+        this.queues = Array.isArray(queues) ? queues : [queues];
+        this.channel = null;
     }
 
-    static async sendToQueue(queueName, data) {
-        try {
-            await channel.sendToQueue(queueName, Buffer.from(JSON.stringify(data)));
-            console.log('Mensaje enviado a la cola:', this.queueName);
-            console.log('Mensaje:', data);
+    static async sendToQueue(queue, message) {
+        if (!this.channel) {
+            throw new Error('El canal no está inicializado. Llama a setupRabbitMQ primero.');
+        }
 
+        try {
+            this.channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)), { persistent: true });
+            console.log(`Mensaje enviado a ${queue}:`, message);
         } catch (error) {
-            throw new Error(`Error enviando mensaje a la cola ${this.queueName}: ${error}`);
+            console.error(`Error enviando mensaje a la cola ${queue}:`, error);
         }
     }
 
     async setupRabbitMQ() {
         try {
             const connection = await amqp.connect(process.env.RABBITMQ_URL);
-            channel = await connection.createChannel();
-            await channel.assertQueue(this.queueName, { durable: true });
-            console.log(`RabbitMQ configurado para la cola: ${this.queueName}`);
+            this.channel = await connection.createChannel();
 
+            for (const queue of this.queues) {
+                await this.channel.assertQueue(queue, { durable: true });
+                console.log(`Cola configurada: ${queue}`);
+            }
         } catch (error) {
-            console.error(`Error configurando RabbitMQ para ${this.queueName}:`, error);
+            console.error('Error configurando RabbitMQ:', error);
         }
     }
 
