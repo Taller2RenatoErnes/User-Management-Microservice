@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const grpc = require('@grpc/grpc-js');
 const { generateToken, getIdJWT } = require('../middleware/jwt.js');
 const { createProgress, getProgressesUsers } = require('./progressController.js');
+const RabbitService = require('../services/rabbitMQService.js');
 
 
 const login = async (request) => {
@@ -224,10 +225,15 @@ const createUser = async (request) => {
             return Promise.reject({ code: grpc.status.ALREADY_EXISTS, error: true, message: 'Usuario existente' });
         }
         const newUser = await User.create({ name, firstLastname, secondLastname, rut, email, password, idCareer });
-
         if (!newUser) {
             return Promise.reject({ error: true, message: 'Error al crear el usuario.' });
         }
+
+        await RabbitService.sendToQueue('register_queue', {
+            operation: 'register',
+            data: newUser,
+        })
+
 
         return Promise.resolve({ error: false, message: 'Usuario creado exitosamente.' });
     } catch (error) {

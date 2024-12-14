@@ -22,6 +22,7 @@ class Server {
         this.middlewares();
         this.dBConnection();
         this.initGrpcServer();
+        this.rabbitMQ();
     }
 
     async dBConnection() {
@@ -42,7 +43,7 @@ class Server {
     }
 
     rabbitMQ() {
-        const rabbit = new RabbitMQ();
+        const rabbit = new RabbitMQ('register_queue');
         rabbit.setupRabbitMQ();
     }
 

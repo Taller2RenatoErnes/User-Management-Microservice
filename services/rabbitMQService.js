@@ -1,106 +1,76 @@
-    const amqp = require('amqplib');
-    const { token } = require('morgan');
-    const REQUEST_QUEUE = 'request_queue';
-    const RESPONSE_QUEUE = 'response_queue';
+const amqp = require('amqplib');
+const grpc = require('@grpc/grpc-js');
+const protoLoader = require('@grpc/proto-loader');
+const path = require('path');
 
+const QUEUES = {
+    auth: 'auth_queue',
+    careers: 'careers_queue',
+    users: 'users_queue',
+};
 
+const PROTO_PATH = './protobuf/user.proto';
+const packageDefinition = protoLoader.loadSync(PROTO_PATH);
 
-    let channel;
+let channel;
 
-    const handlers = {
-    authenticate: async (data) => {
-        
-    },
-    register: async (data) => {
-        const { username, password } = data;
-        console.log('Registrando usuario:', username);
-        return { status: 'success', message: 'Usuario registrado exitosamente' };
-    },
-    updateUser: async (data) => {
-        const { userId, updates } = data;
-        console.log('Actualizando usuario:', userId, updates);
-        return { status: 'success', message: 'Usuario actualizado correctamente' };
-    },
-    };
+class RabbitService {
 
-    class RabbitService{
-    constructor(){}
+    constructor(queueName) {
 
+        this.queueName = queueName;    
+    }
 
-    setupRabbitMQ = async () => {
+    static async sendToQueue(queueName, data) {
         try {
-        const connection = await amqp.connect(process.env.RABBITMQ_URL);
-        channel = await connection.createChannel();
-        await channel.assertQueue(REQUEST_QUEUE, { durable: true });
-        await channel.assertQueue(RESPONSE_QUEUE, { durable: true });
-        await channel.assertQueue('login_response', { durable: true });
-        this.consumeResponse();
-        } catch (error) {
-        console.error('Error configurando RabbitMQ:', error);
-        }
-    };
+            await channel.sendToQueue(queueName, Buffer.from(JSON.stringify(data)));
+            console.log('Mensaje enviado a la cola:', this.queueName);
+            console.log('Mensaje:', data);
 
-    sendMessageAndWaitResponse = (message) => {
-        return new Promise((resolve, reject) => {
-        const correlationId = generateCorrelationId();
-    
-        // Configurar escucha para la respuesta
+        } catch (error) {
+            throw new Error(`Error enviando mensaje a la cola ${this.queueName}: ${error}`);
+        }
+    }
+
+    async setupRabbitMQ() {
+        try {
+            const connection = await amqp.connect(process.env.RABBITMQ_URL);
+            channel = await connection.createChannel();
+            await channel.assertQueue(this.queueName, { durable: true });
+            console.log(`RabbitMQ configurado para la cola: ${this.queueName}`);
+
+        } catch (error) {
+            console.error(`Error configurando RabbitMQ para ${this.queueName}:`, error);
+        }
+    }
+
+    consumeQueue() {
+        console.log(`Escuchando mensajes en la cola: ${this.queueName}...`);
         channel.consume(
-            RESPONSE_QUEUE,
-            (msg) => {
-            if (msg.properties.correlationId === correlationId) {
-                resolve(JSON.parse(msg.content.toString()));
-                channel.ack(msg); // Confirma que el mensaje fue procesado
-            }
+            this.queueName,
+            async (msg) => {
+                try {
+                    const message = JSON.parse(msg.content.toString());
+    
+                    const { operation, data, correlationId, replyTo } = message;
+
+                    if (this.handlers[operation]) {
+                        const result = await this.handlers[operation](data);
+                        console.log('Resultado: ', result);
+                        console.log(`Operación ${operation} completada con éxito.`);
+                    } else {
+                        console.error(`Operación no soportada: ${operation}`);
+                    }
+    
+                    channel.ack(msg);
+                } catch (error) {
+                    console.error(`Error procesando mensaje en ${this.queueName}:`, error);
+                    channel.nack(msg);
+                }
             },
             { noAck: false }
         );
-        console.log('Enviando mensaje:', message);
-        // Enviar mensaje a la cola
-        channel.sendToQueue('login_response', Buffer.from(JSON.stringify(message)), {
-        });
-        });
-    };
-
-    generateCorrelationId = () => {
-        return Math.random().toString() + Date.now().toString();
-    };
-
-    consumeResponse = () => {
-        console.log('RabbitMQ - Sincronizador de respuestas iniciado');
-
-        channel.consume(
-        REQUEST_QUEUE,
-        async (msg) => {
-            console.log('Mensaje recibido:', msg.content.toString());
-            const message = JSON.parse(msg.content.toString());
-            const { operation, data, correlationId, replyTo } = message;
-            console.log(`Operación ${operation} recibida`);
-            // Verificar si existe el manejador para la operación
-            if (handlers[operation]) {
-    
-            try {
-                const result = await handlers[operation](data);
-                channel.sendToQueue(
-                'login_response',
-                Buffer.from(JSON.stringify({ correlationId, result })),
-                { correlationId }
-                );
-                console.log(`Operación ${operation} completada`);
-            } catch (error) {
-                console.error(`Error ejecutando operación ${operation}:`, error);
-            }
-            } else {
-            console.error(`Operación no soportada: ${operation}`);
-            }
-    
-            // Confirmar el mensaje procesado
-            channel.ack(msg);
-        },
-        { noAck: false }
-        );
-    };
     }
+}
 
-    
-    module.exports = RabbitService;
+module.exports = RabbitService;
