@@ -85,7 +85,6 @@ message CreateUserResponse {
 }
 
 message UpdatePasswordRequest {
-    string token = 1;            
     string oldPassword = 2;     
     string newPassword = 3;     
     string passwordConfirm = 4; 

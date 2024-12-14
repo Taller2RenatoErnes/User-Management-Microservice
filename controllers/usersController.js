@@ -229,10 +229,10 @@ const createUser = async (request) => {
             return Promise.reject({ error: true, message: 'Error al crear el usuario.' });
         }
 
-        await RabbitService.sendToQueue('register_queue', {
+        await RabbitService.sendToQueue({
             operation: 'register',
             data: newUser,
-        })
+        },'register_queue')
 
 
         return Promise.resolve({ error: false, message: 'Usuario creado exitosamente.' });
@@ -279,17 +279,16 @@ const updatePassword = async (request, token) => {
         if (!isPasswordValid) {
             return Promise.reject({
                 code: grpc.status.INVALID_ARGUMENT,
-                message: 'Contraseña actual incorrecta.',
+                message: 'Intente de nuevo, error de coincidencia',
             });
         }
 
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await user.update({ password: hashedPassword });
+        await user.update({ password: newPassword });
 
-        await RabbitService.sendToQueue('update_pw_queue', {
+        await RabbitService.sendToQueue( {
             operation: 'updatePw',
             data: newPassword,
-        })
+        }, 'update_pw_queue')
 
         return Promise.resolve({ message: 'Contraseña actualizada exitosamente.' });
     } catch (error) {

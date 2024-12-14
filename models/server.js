@@ -45,11 +45,20 @@ class Server {
         }
     }
 
-    rabbitMQ() {
-        const rabbit = new RabbitMQ([this.queues.password, this.queues.register]);
-        rabbit.setupRabbitMQ();
+    async rabbitMQ() {
+        try {
+            await RabbitMQ.setupRabbitMQ(Object.values(this.queues));
+    
+            this.rabbitPasswordQueue = new RabbitMQ(this.queues.password);
+            this.rabbitRegisterQueue = new RabbitMQ(this.queues.register);
+    
+            console.log('RabbitMQ configurado correctamente');
+        } catch (err) {
+            console.error('Error inicializando RabbitMQ:', err);
+        }
     }
-
+    
+    
     middlewares() {
         this.app.use(logger('dev'));
         this.app.use(cors());
@@ -97,6 +106,12 @@ class Server {
             },
 
             CreateUser: this.grpcCreateUser,
+
+            UpdatePassword: (call, callback) => {
+                validateJWTGrpc(call, callback, () => {
+                    this.grpcUpdatePassword(call, callback);
+                });
+            }
 
         });
         this.grpcServer.bindAsync(`0.0.0.0:${this.grpcPort}`, grpc.ServerCredentials.createInsecure(), (err, port) => {
@@ -216,16 +231,14 @@ class Server {
 
     grpcUpdatePassword(call, callback) {
         const token = getTokenAuth(call);
-        updatePassword(call.request, token)
+        userController.updatePassword(call.request, token)
             .then((response) => {
                 callback(null, response);
             })
             .catch((err) => {
-                callback({ code: grpc.status.INTERNAL, message: err.message });            
+                callback({ code: grpc.status.INTERNAL, message: err.message });
             });
     }
-    
-
 
     listen() {
         this.Server.listen(this.port, () => {

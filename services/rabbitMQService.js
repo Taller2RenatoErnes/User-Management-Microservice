@@ -1,75 +1,67 @@
 const amqp = require('amqplib');
-const grpc = require('@grpc/grpc-js');
-const protoLoader = require('@grpc/proto-loader');
-const path = require('path');
-
-const QUEUES = {
-    auth: 'auth_queue',
-    careers: 'careers_queue',
-    users: 'users_queue',
-};
-
-const PROTO_PATH = './protobuf/user.proto';
-const packageDefinition = protoLoader.loadSync(PROTO_PATH);
-
-let channel;
 
 class RabbitService {
+    static channel = null;
 
-    constructor(queues) {
-        this.queues = Array.isArray(queues) ? queues : [queues];
-        this.channel = null;
+    constructor(queueName) {
+        this.queueName = queueName;
     }
 
-    static async sendToQueue(queue, message) {
-        if (!this.channel) {
-            throw new Error('El canal no está inicializado. Llama a setupRabbitMQ primero.');
-        }
+    static async setupRabbitMQ(queues = []) {
+        if (this.channel) return;
 
-        try {
-            this.channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)), { persistent: true });
-            console.log(`Mensaje enviado a ${queue}:`, message);
-        } catch (error) {
-            console.error(`Error enviando mensaje a la cola ${queue}:`, error);
-        }
-    }
-
-    async setupRabbitMQ() {
         try {
             const connection = await amqp.connect(process.env.RABBITMQ_URL);
             this.channel = await connection.createChannel();
 
-            for (const queue of this.queues) {
+            for (const queue of queues) {
                 await this.channel.assertQueue(queue, { durable: true });
                 console.log(`Cola configurada: ${queue}`);
             }
         } catch (error) {
             console.error('Error configurando RabbitMQ:', error);
+            throw new Error('RabbitMQ no se pudo inicializar.');
         }
     }
 
-    consumeQueue() {
+    static async sendToQueue(data, queue) {
+        if (!RabbitService.channel) {
+            throw new Error('RabbitMQ no está configurado.');
+        }
+        try {
+            RabbitService.channel.sendToQueue(queue, Buffer.from(JSON.stringify(data)));
+            console.log(`Mensaje enviado a la cola ${queue}:`, data);
+        } catch (error) {
+            console.error(`Error enviando mensaje a la cola ${queue}:`, error);
+            throw error;
+        }
+    }
+
+    async consumeQueue(handlers = {}) {
+        if (!RabbitService.channel) {
+            throw new Error('RabbitMQ no está configurado.');
+        }
+
         console.log(`Escuchando mensajes en la cola: ${this.queueName}...`);
-        channel.consume(
+
+        RabbitService.channel.consume(
             this.queueName,
             async (msg) => {
                 try {
                     const message = JSON.parse(msg.content.toString());
-    
-                    const { operation, data, correlationId, replyTo } = message;
+                    const { operation, data } = message;
 
-                    if (this.handlers[operation]) {
-                        const result = await this.handlers[operation](data);
-                        console.log('Resultado: ', result);
-                        console.log(`Operación ${operation} completada con éxito.`);
+                    if (handlers[operation]) {
+                        const result = await handlers[operation](data);
+                        console.log(`Resultado operación ${operation}:`, result);
                     } else {
                         console.error(`Operación no soportada: ${operation}`);
                     }
-    
-                    channel.ack(msg);
+
+                    RabbitService.channel.ack(msg);
                 } catch (error) {
-                    console.error(`Error procesando mensaje en ${this.queueName}:`, error);
-                    channel.nack(msg);
+                    console.error(`Error procesando mensaje:`, error);
+                    RabbitService.channel.nack(msg);
                 }
             },
             { noAck: false }
