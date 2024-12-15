@@ -170,7 +170,7 @@ const updateProgress = async (request) => {
             for (const courseCode of approvedCourses) {
                 await Progress.update(
                     { state: 'approved', lastTimeUpdated: new Date() },
-                    { where: { idUser: id, asignatureCode: parseInt(courseCode) } } // Convertir a entero
+                    { where: { idUser: id, asignatureCode: courseCode } } 
                 );
             }
         }
@@ -181,7 +181,7 @@ const updateProgress = async (request) => {
                 {
                     where: {
                         idUser: id,
-                        asignatureCode: removedCourses.map((course) => parseInt(course)), // Convertir a entero
+                        asignatureCode: removedCourses.map((course) => course),
                         state: 'approved',
                     },
                 }
