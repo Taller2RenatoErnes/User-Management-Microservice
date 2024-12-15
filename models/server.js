@@ -158,6 +158,7 @@ class Server {
     };
 
     grpcGetProfile(call, callback) {
+
         const token = getTokenAuth(call);
         userController.getUser(token).then((response) => {
             callback(null, response);
@@ -185,8 +186,6 @@ class Server {
     grpcUpdateProgress(call, callback) {
         const { approvedCourses, removedCourses } = call.request;
         const token = getTokenAuth(call);
-
-        console.log(approvedCourses, removedCourses, token);
 
         userController.updateProgress({ token, approvedCourses, removedCourses }).then((response) => {
             callback(null, response);

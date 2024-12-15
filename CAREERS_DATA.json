@@ -1,0 +1,155 @@
+[
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567001",
+        "code": "MAT101",
+        "name": "C\u00e1lculo I",
+        "department": "Matem\u00e1ticas",
+        "credits": 6,
+        "semester": 1,
+        "career_id": 0
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567002",
+        "code": "MAT102",
+        "name": "C\u00e1lculo II",
+        "department": "Matem\u00e1ticas",
+        "credits": 6,
+        "semester": 2,
+        "career_id": 1
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567003",
+        "code": "FIS101",
+        "name": "F\u00edsica I",
+        "department": "F\u00edsica",
+        "credits": 5,
+        "semester": 1,
+        "career_id": 2
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567004",
+        "code": "FIS102",
+        "name": "F\u00edsica II",
+        "department": "F\u00edsica",
+        "credits": 5,
+        "semester": 2,
+        "career_id": 3
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567005",
+        "code": "INF101",
+        "name": "Programaci\u00f3n B\u00e1sica",
+        "department": "Inform\u00e1tica",
+        "credits": 5,
+        "semester": 1,
+        "career_id": 4
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567006",
+        "code": "INF102",
+        "name": "Estructuras de Datos",
+        "department": "Inform\u00e1tica",
+        "credits": 6,
+        "semester": 2,
+        "career_id": 5
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567007",
+        "code": "INF103",
+        "name": "An\u00e1lisis de Algoritmos",
+        "department": "Inform\u00e1tica",
+        "credits": 6,
+        "semester": 3,
+        "career_id": 6
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567008",
+        "code": "QUI101",
+        "name": "Qu\u00edmica General",
+        "department": "Qu\u00edmica",
+        "credits": 5,
+        "semester": 1,
+        "career_id": 7
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567009",
+        "code": "QUI102",
+        "name": "Qu\u00edmica Org\u00e1nica",
+        "department": "Qu\u00edmica",
+        "credits": 6,
+        "semester": 2,
+        "career_id": 1
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567010",
+        "code": "ELE101",
+        "name": "Electromagnetismo",
+        "department": "Electricidad",
+        "credits": 6,
+        "semester": 2,
+        "career_id": 6
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567011",
+        "code": "ELE102",
+        "name": "Circuitos El\u00e9ctricos",
+        "department": "Electricidad",
+        "credits": 6,
+        "semester": 3,
+        "career_id": 1
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567012",
+        "code": "MAT103",
+        "name": "C\u00e1lculo III",
+        "department": "Matem\u00e1ticas",
+        "credits": 6,
+        "semester": 3,
+        "career_id": 7
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567013",
+        "code": "FIS201",
+        "name": "Mec\u00e1nica",
+        "department": "F\u00edsica",
+        "credits": 6,
+        "semester": 3,
+        "career_id": 3
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567014",
+        "code": "INF201",
+        "name": "Bases de Datos",
+        "department": "Inform\u00e1tica",
+        "credits": 6,
+        "semester": 4,
+        "career_id": 2
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567015",
+        "code": "INF202",
+        "name": "Redes de Computadoras",
+        "department": "Inform\u00e1tica",
+        "credits": 6,
+        "semester": 4,
+        "career_id": 3
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567016",
+        "code": "QUI201",
+        "name": "Qu\u00edmica Inorg\u00e1nica",
+        "department": "Qu\u00edmica",
+        "credits": 6,
+        "semester": 3,
+        "career_id": 6
+    },
+    {
+        "_id": "a1b2c3d4-e5f6-7890-abcd-1234567017",
+        "code": "ELE201",
+        "name": "Electr\u00f3nica Anal\u00f3gica",
+        "department": "Electricidad",
+        "credits": 6,
+        "semester": 4,
+        "career_id": 5
+    }
+]

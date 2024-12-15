@@ -4,51 +4,51 @@ const sequelize = require('./database.js');
 
 const User = sequelize.define('User', {
     id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
+        type: DataTypes.UUID, 
+        defaultValue: DataTypes.UUIDV4, 
         primaryKey: true,
         allowNull: false,
     },
     name: {
-        type: DataTypes.STRING(15),
+        type: DataTypes.STRING,
         allowNull: false,
         validate: {
             notEmpty: true,
-            len: [1, 15],
         },
     },
     firstLastname: {
-        type: DataTypes.STRING(100),
+        type: DataTypes.STRING,
         allowNull: false,
         validate: {
             notEmpty: true,
         },
     },
     secondLastname: {
-        type: DataTypes.STRING(100),
+        type: DataTypes.STRING,
         allowNull: false,
         validate: {
             notEmpty: true,
-            len: [1, 100],
         },
     },
     rut: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.STRING,
         allowNull: false,
+        unique: true,
         validate: {
             notEmpty: true,
         },
     },
     email: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.STRING,
         allowNull: false,
+        unique: true,
         validate: {
             isEmail: true,
             notEmpty: true,
         },
     },
     password: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.STRING,
         allowNull: false,
         validate: {
             notEmpty: true,
@@ -56,13 +56,13 @@ const User = sequelize.define('User', {
     },
     idCareer: {
         type: DataTypes.INTEGER,
-        allowNull: false
+        allowNull: false,
     },
 }, {
     timestamps: true,
     paranoid: true,
+    tableName: 'Users',
 });
-
 
 User.beforeCreate(async (user) => {
     const saltRounds = 10;

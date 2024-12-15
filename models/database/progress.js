@@ -1,19 +1,21 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('./database.js');
+const { v4: uuidv4 } = require('uuid');
 
 const Progress = sequelize.define('Progress', {
     id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
+        type: DataTypes.UUID, 
+        defaultValue: DataTypes.UUIDV4, 
         primaryKey: true,
         allowNull: false,
     },
     idUser: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.UUID, 
+        defaultValue: DataTypes.UUIDV4, 
         allowNull: false,
     },
     asignatureCode: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.STRING,
         allowNull: false
     },
     state:{

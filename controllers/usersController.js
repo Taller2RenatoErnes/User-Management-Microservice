@@ -2,8 +2,8 @@ const { User, Progress } = require('../models/database/indexDB.js');
 const bcrypt = require('bcrypt');
 const grpc = require('@grpc/grpc-js');
 const { generateToken, getIdJWT } = require('../middleware/jwt.js');
-const { createProgress, getProgressesUsers } = require('./progressController.js');
 const RabbitService = require('../services/rabbitMQService.js');
+const { v4: uuidv4 } = require('uuid');
 
 
 const login = async (request) => {
@@ -224,7 +224,7 @@ const createUser = async (request) => {
         if (await User.findOne({ where: { email } }) || await User.findOne({ where: { rut } })) {
             return Promise.reject({ code: grpc.status.ALREADY_EXISTS, error: true, message: 'Usuario existente' });
         }
-        const newUser = await User.create({ name, firstLastname, secondLastname, rut, email, password, idCareer });
+        const newUser = await User.create({id: uuidv4(), name, firstLastname, secondLastname, rut, email, password, idCareer });
         if (!newUser) {
             return Promise.reject({ error: true, message: 'Error al crear el usuario.' });
         }
